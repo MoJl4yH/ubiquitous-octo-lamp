@@ -1,7 +1,6 @@
 Yougile telegram bot
 
 
-----------------------------------------------------------structure-data-yougile----------------------------------------------------------
 Описание API - https://yougile.com/api-v2/
 
 1. Проект - "Название проекта" --- https://yougile.com/api-v2#/operations/ProjectController_search
@@ -15,5 +14,3 @@ Yougile telegram bot
 5. Стикеры - "Тип стикера" --- https://yougile.com/api-v2#/operations/StringStickerController_search (есть езще спринт стикеры, надо разобраться что они делают)
 
 Каждый endpoint видит id endpoint сверху и endpoint снизу.
-
-----------------------------------------------------------structure-data-yougile----------------------------------------------------------
