@@ -31,3 +31,18 @@ class YougileAPI:
         return self.get_json('tasks').get('content')
 
 
+if __name__ == '__main__':
+    from instances.base import Base
+
+    class User(Base):
+        _attributes = 'real_name status last_activity email is_admin'.split()
+
+        def update(self, api):
+            json = api.get_json(['users', self.yougile_id])
+            self.update_by_json(json)
+
+    api = YougileAPI('api_key_here')
+
+    user = User('cf86057a-88ff-4a6b-9800-8670de247d33')
+    user.update(api)
+    print('aboba')
