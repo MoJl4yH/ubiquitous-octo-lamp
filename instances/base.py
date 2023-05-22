@@ -1,3 +1,6 @@
+from config import api
+
+
 class MetaBase(type):
     def __new__(mcls, name, bases, attrs):
         for name in attrs.get('_attributes', ()):
@@ -5,9 +8,16 @@ class MetaBase(type):
         return type.__new__(mcls, name, bases, attrs)
 
 
+json_attributes_to_instance_variable = {
+    'id': 'yougile_id',
+}
+
+
 class Base(metaclass=MetaBase):
     _attributes = []
     _related_attributes = []
+    _path = ''
+    _api = api
 
     def __init__(self, yougile_id):
         self.yougile_id = yougile_id
@@ -15,7 +25,21 @@ class Base(metaclass=MetaBase):
     def update_by_json(self, json):
         self.yougile_id = json['id']
         for attr in self._attributes:
-            self.__setattr__(attr, json[to_camel_case(attr)])
+            if attr in self._related_attributes:
+                self.update_related(attr, json[attr])
+            else:
+                self.__setattr__(attr, json[to_camel_case(attr)])
+
+    def update_related(self, related_attr, value):
+        ...
+        # cls = attribute2class(related_attr)
+        # if isinstance(value, dict):
+        #     ...
+
+
+    def update(self):
+        json = self._api.get_json([self._path, self.yougile_id])
+        self.update_by_json(json)
             
     @classmethod
     def from_json(cls, json):
