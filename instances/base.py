@@ -1,16 +1,11 @@
-from config import api
-
+from config import api, get_from_json
+from pprint import pprint
 
 class MetaBase(type):
     def __new__(mcls, name, bases, attrs):
         for name in attrs.get('_attributes', ()):
             attrs[name] = 0
         return type.__new__(mcls, name, bases, attrs)
-
-
-json_attributes_to_instance_variable = {
-    'id': 'yougile_id',
-}
 
 
 class Base(metaclass=MetaBase):
@@ -26,9 +21,9 @@ class Base(metaclass=MetaBase):
         self.yougile_id = json['id']
         for attr in self._attributes:
             if attr in self._related_attributes:
-                self.update_related(attr, json[attr])
+                self.update_related(attr, get_from_json(json, attr, self.__class__.__name__))
             else:
-                self.__setattr__(attr, json[to_camel_case(attr)])
+                self.__setattr__(attr, get_from_json(json, attr, self.__class__.__name__))
 
     def update_related(self, related_attr, value):
         ...
