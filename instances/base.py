@@ -8,7 +8,7 @@ class MetaBase(type):
         return type.__new__(mcls, name, bases, attrs)
 
 
-class Base(metaclass=MetaBase):
+class Base:#class Base(metaclass=MetaBase):
     _attributes = []
     _related_attributes = []
     _path = ''
@@ -16,9 +16,10 @@ class Base(metaclass=MetaBase):
 
     def __init__(self, yougile_id):
         self.yougile_id = yougile_id
+        for attribute in self._attributes:
+            self.__setattr__(attribute, None)
 
     def update_by_json(self, json):
-        self.yougile_id = json['id']
         for attr in self._attributes:
             if attr in self._related_attributes:
                 self.update_related(attr, get_from_json(json, attr, self.__class__.__name__))
