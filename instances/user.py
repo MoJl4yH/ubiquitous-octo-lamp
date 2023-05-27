@@ -13,7 +13,7 @@ class User(Base):
         return f"<User: {self.email}>"
 
     def __repr__(self):
-        return f"<user: {self.email}>"
+        return f"<User: {self.email}>"
 
 
 class UserList(BaseList):

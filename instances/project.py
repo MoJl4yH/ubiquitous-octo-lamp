@@ -9,3 +9,9 @@ class Project(Base):
                    'users': 	UserList}
     _related_attributes = ['users']
     _path = 'projects'
+
+    def __str__(self):
+        return f'<Project: {self.title}>'
+
+    def __repr__(self):
+        return f'<Project: {self.title}>'
