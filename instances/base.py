@@ -1,46 +1,58 @@
 from config import api, get_from_json
 from pprint import pprint
 
-class MetaBase(type):
-    def __new__(mcls, name, bases, attrs):
-        for name in attrs.get('_attributes', ()):
-            attrs[name] = 0
-        return type.__new__(mcls, name, bases, attrs)
 
-
-class Base:#class Base(metaclass=MetaBase):
-    _attributes = []
+class Base:
+    _attributes = {}
     _related_attributes = []
     _path = ''
     _api = api
 
     def __init__(self, yougile_id):
         self.yougile_id = yougile_id
-        for attribute in self._attributes:
+        for attribute in self._attributes.keys():
             self.__setattr__(attribute, None)
 
-    def update_by_json(self, json):
-        for attr in self._attributes:
-            if attr in self._related_attributes:
-                self.update_related(attr, get_from_json(json, attr, self.__class__.__name__))
+    def fill_by_json(self, json):
+        for attribute, cls in self._attributes.items():
+            if attribute in self._related_attributes:
+                self.reload_related(attribute, get_from_json(json, attribute, self.__class__.__name__), cls)
             else:
-                self.__setattr__(attr, get_from_json(json, attr, self.__class__.__name__))
+                self.__setattr__(attribute, get_from_json(json, attribute, self.__class__.__name__), cls)
 
-    def update_related(self, related_attr, value):
-        ...
-        # cls = attribute2class(related_attr)
-        # if isinstance(value, dict):
-        #     ...
+    def __setattr__(self, key, value, cls=None):
+        if cls:
+            instance = None
+            if isinstance(cls, tuple):
+                initializer, converter = cls
+                instance = initializer(converter(value))
+            else:
+                instance = cls(value)
+            if 'reload' in dir(instance):
+                instance.reload()
+            self.__dict__[key] = instance
+        else:
+            super().__setattr__(key, value)
 
+    def reload_related(self, related_attr, value, cls):
+        if isinstance(value, str):
+            self.__setattr__(related_attr, value, cls)
+        else:
+            instance_list = cls()
+            for yougile_id, attributes in value.items():
+                instance = cls._base_class(yougile_id)
+                instance.reload()
+                instance_list.add(instance, attributes)
+            self.__setattr__(related_attr, instance_list)
 
-    def update(self):
+    def reload(self):
         json = self._api.get_json([self._path, self.yougile_id])
-        self.update_by_json(json)
+        self.fill_by_json(json)
             
     @classmethod
     def from_json(cls, json):
         base = cls('')
-        base.update_by_json(json)
+        base.fill_by_json(json)
         return base
 
 
@@ -53,12 +65,21 @@ class BaseList:
     _base_class = Base
 
     def __init__(self):
-        self.instance_attributes = {}
+        self.instance_and_attributes = {}   # добавить дикт сохраняющий последовательность
 
     def all(self):
-        return self.instance_attributes.keys()
+        return list(self.instance_and_attributes.keys())
 
-    def add(self, instance, attributes=None):
-        if not isinstance(instance, self._base_class):
-            instance = self._base_class.from_json(instance)
-        self.instance_attributes[instance] = attributes
+    def add(self, instance_or_json, attributes=None):
+        if isinstance(instance_or_json, self._base_class):
+            instance = instance_or_json
+        else:
+            instance = self._base_class.from_json(instance_or_json)
+        self.instance_and_attributes[instance] = attributes
+
+    def get(self, index):
+        item_by_index = list(self.instance_and_attributes.keys())[index]
+        return self.instance_and_attributes[item_by_index]
+
+    def __getitem__(self, item):
+        return self.instance_and_attributes[item]
