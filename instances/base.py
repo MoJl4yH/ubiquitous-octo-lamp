@@ -21,34 +21,39 @@ class MemorizedInstances:
 
 
 class Base:
-    _attributes = {}
-    _related_attributes = []
-    _path = ''
-    _api = api
-    _memorized_instances = MemorizedInstances()
+    _attributes = {}            # Base attributes for instance without id (yougile_id)
+    _related_attributes = []    # Related attributes is attributes which represents by Instance(Base)
+    _path = ''                  # API path without https://yougile.com/api-v2/
+    _api = api                  # API instance which can get jsons
+    _memorized_instances = MemorizedInstances()     # Struct to contain existed instances
 
-    def __new__(cls, *args, **kwargs):
-        instance = cls._memorized_instances.get(cls.__name__, args[0])
-        if instance is None:
-            instance = super().__new__(cls)
-            cls._memorized_instances.add(instance, args[0])
-            instance.__setattr__('creation', True)
+    def __new__(cls, *args, **kwargs):                                  # Create instance or give it from memory
+        instance = cls._memorized_instances.get(cls.__name__, args[0])  # Get existed instance or None
+        if instance is None:                                            # If instance doesn't exist
+            instance = super().__new__(cls)                             # Create new instance by default method
+            cls._memorized_instances.add(instance, args[0])             # And add it to existed
+            instance.__setattr__('creation', True)                      # Set 'creation' attribute to init
+        else:                                                           # If instance exists
+            instance.__setattr__('creation', False)                     # Set 'creation' attribute to skip init
         return instance
 
     def __init__(self, yougile_id):
-        if not self.creation:
+        if not self.creation:           # 'Creation' is false if we don't need to reinit instance
             return
-        self.yougile_id = yougile_id
+        self.yougile_id = yougile_id    # Init main attribute to identify instance
+        self.init_base_attributes()     # Init base attributes for instance by None
+
+    def init_base_attributes(self):
         for attribute in self._attributes.keys():
             self.__setattr__(attribute, None)
-        self.creation = False
 
     def fill_by_json(self, json):
         for attribute, cls in self._attributes.items():
+            value = get_from_json(json, attribute, self.__class__.__name__)
             if attribute in self._related_attributes:
-                self.reload_related(attribute, get_from_json(json, attribute, self.__class__.__name__), cls)
+                self.reload_related(attribute, value, cls)
             else:
-                self.__setattr__(attribute, get_from_json(json, attribute, self.__class__.__name__), cls)
+                self.__setattr__(attribute, value, cls)
 
     def __setattr__(self, key, value, cls=None):
         if cls:
@@ -87,11 +92,6 @@ class Base:
         return base
 
 
-def to_camel_case(name):
-    first, *others = name.split('_')
-    return ''.join([first.lower(), *map(str.title, others)])
-
-
 class BaseList:
     _base_class = Base
 
@@ -114,3 +114,37 @@ class BaseList:
 
     def __getitem__(self, item):
         return self.instance_and_attributes[item]
+
+
+class BaseList2:
+    _base_class = Base
+
+    def __init__(self, instances):
+        self.instances = instances[:]
+
+    def __getitem__(self, item):
+        return self.instances[item]
+
+    def all(self):
+        return self.instances
+
+
+class BaseDict:
+    _base_class = Base
+
+    def __init__(self, instance_list, values_list):
+        if len(instance_list) == len(values_list):
+            self.instance2value = {instance: value for instance, value in zip(instance_list, values_list)}
+
+    def __setitem__(self, key, value):
+        self.instance2value[key] = value
+
+    def __getitem__(self, item):
+        return self.instance2value[item]
+
+    def all(self):
+        return self.instance2value
+
+    def get(self, index):
+        item_by_index = list(self.instance2value.keys())[index]
+        return self.instance2value[item_by_index]
