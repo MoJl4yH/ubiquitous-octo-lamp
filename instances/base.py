@@ -1,5 +1,23 @@
+
 from config import api, get_from_json
 from pprint import pprint
+
+
+class MemorizedInstances:
+    def __init__(self):
+        self.instances = {}     # {'<Class>': {'<id>': instance}}
+
+    def add(self, instance, yougile_id):
+        cls_name = instance.__class__.__name__
+        if cls_name not in self.instances:
+            self.instances[cls_name] = {}
+        self.instances[cls_name][yougile_id] = instance
+
+    def get(self, cls, yougile_id):
+        cls_instances = self.instances.get(cls)
+        if cls_instances is None:
+            return None
+        return cls_instances.get(yougile_id)
 
 
 class Base:
@@ -7,11 +25,23 @@ class Base:
     _related_attributes = []
     _path = ''
     _api = api
+    _memorized_instances = MemorizedInstances()
+
+    def __new__(cls, *args, **kwargs):
+        instance = cls._memorized_instances.get(cls.__name__, args[0])
+        if instance is None:
+            instance = super().__new__(cls)
+            cls._memorized_instances.add(instance, args[0])
+            instance.__setattr__('creation', True)
+        return instance
 
     def __init__(self, yougile_id):
+        if not self.creation:
+            return
         self.yougile_id = yougile_id
         for attribute in self._attributes.keys():
             self.__setattr__(attribute, None)
+        self.creation = False
 
     def fill_by_json(self, json):
         for attribute, cls in self._attributes.items():
@@ -51,7 +81,8 @@ class Base:
             
     @classmethod
     def from_json(cls, json):
-        base = cls('')
+        yougile_id = get_from_json(json, 'yougile_id')
+        base = cls(yougile_id)
         base.fill_by_json(json)
         return base
 
