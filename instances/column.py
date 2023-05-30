@@ -8,7 +8,6 @@ class Column(Base):
         'color': int,
         'title': str
     }
-    _related_attributes = ['board']
     _path = 'columns'
 
     def __str__(self):

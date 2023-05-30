@@ -7,7 +7,6 @@ class Board(Base):
         'project':  Project,
         'title':    str
     }
-    _related_attributes = ['project']
     _path = 'boards'
 
     def __str__(self):

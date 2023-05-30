@@ -1,4 +1,4 @@
-from instances.base import Base, BaseList
+from instances.base import Base, BaseList, BaseDict
 
 
 class User(Base):
@@ -17,4 +17,8 @@ class User(Base):
 
 
 class UserList(BaseList):
+    _base_class = User
+
+
+class UsersDict(BaseDict):
     _base_class = User

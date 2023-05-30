@@ -13,7 +13,6 @@ class Task(Base):
         'timestamp': (datetime.fromtimestamp, lambda miliseconds: miliseconds / 1000),
         'title': str
     }
-    _related_attributes = ['column', 'created_by']
     _path = 'tasks'
 
     def __str__(self):

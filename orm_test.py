@@ -24,8 +24,21 @@ def main():
 
 	task = Task('00dbd904-0ba0-4f0b-a1c5-6fca3ea0dd0c')
 	task.reload()
+	print('___TASK___')
 	pp(task.__dict__)
-
+	print('___USER___')
+	pp(task.created_by.__dict__)
+	print('___COLUMN___')
+	pp(task.column.__dict__)
+	print('___BOARD___')
+	pp(task.column.board.__dict__)
+	print('___PROJECT___')
+	pp(task.column.board.project.__dict__)
+	print('___PROJECT_USERS___')
+	pp(task.column.board.project.users.__dict__)
+	
+	
+	
 
 if __name__ == '__main__':
 	main()

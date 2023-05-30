@@ -22,7 +22,6 @@ class MemorizedInstances:
 
 class Base:
     _attributes = {}            # Base attributes for instance without id (yougile_id)
-    _related_attributes = []    # Related attributes is attributes which represents by Instance(Base)
     _path = ''                  # API path without https://yougile.com/api-v2/
     _api = api                  # API instance which can get jsons
     _memorized_instances = MemorizedInstances()     # Struct to contain existed instances
@@ -50,10 +49,7 @@ class Base:
     def fill_by_json(self, json):
         for attribute, cls in self._attributes.items():
             value = get_from_json(json, attribute, self.__class__.__name__)
-            if attribute in self._related_attributes:
-                self.reload_related(attribute, value, cls)
-            else:
-                self.__setattr__(attribute, value, cls)
+            self.__setattr__(attribute, value, cls)    
 
     def __setattr__(self, key, value, cls=None):
         if cls:
@@ -68,17 +64,6 @@ class Base:
             self.__dict__[key] = instance
         else:
             super().__setattr__(key, value)
-
-    def reload_related(self, related_attr, value, cls):
-        if isinstance(value, str):
-            self.__setattr__(related_attr, value, cls)
-        else:
-            instance_list = cls()
-            for yougile_id, attributes in value.items():
-                instance = cls._base_class(yougile_id)
-                instance.reload()
-                instance_list.add(instance, attributes)
-            self.__setattr__(related_attr, instance_list)
 
     def reload(self):
         json = self._api.get_json([self._path, self.yougile_id])
@@ -95,32 +80,13 @@ class Base:
 class BaseList:
     _base_class = Base
 
-    def __init__(self):
-        self.instance_and_attributes = {}   # добавить дикт сохраняющий последовательность
-
-    def all(self):
-        return list(self.instance_and_attributes.keys())
-
-    def add(self, instance_or_json, attributes=None):
-        if isinstance(instance_or_json, self._base_class):
-            instance = instance_or_json
-        else:
-            instance = self._base_class.from_json(instance_or_json)
-        self.instance_and_attributes[instance] = attributes
-
-    def get(self, index):
-        item_by_index = list(self.instance_and_attributes.keys())[index]
-        return self.instance_and_attributes[item_by_index]
-
-    def __getitem__(self, item):
-        return self.instance_and_attributes[item]
-
-
-class BaseList2:
-    _base_class = Base
-
     def __init__(self, instances):
         self.instances = instances[:]
+
+    def append(self, instance):
+        if isinstance(instance, self._base_class):
+            raise TypeError
+        self.instances.append(instance)
 
     def __getitem__(self, item):
         return self.instances[item]
@@ -128,13 +94,22 @@ class BaseList2:
     def all(self):
         return self.instances
 
+    @classmethod
+    def from_id_list(cls, id_list):
+        instance_list = []
+        for yougile_id in id_list:
+            instance = cls._base_class(yougile_id)
+            instance.reload()
+            instance_list.append(instance)
+        return cls(instance_list)
+
 
 class BaseDict:
     _base_class = Base
 
-    def __init__(self, instance_list, values_list):
-        if len(instance_list) == len(values_list):
-            self.instance2value = {instance: value for instance, value in zip(instance_list, values_list)}
+    def __init__(self, instance_list, value_list):
+        if len(instance_list) == len(value_list):
+            self.instance2value = {instance: value for instance, value in zip(instance_list, value_list)}
 
     def __setitem__(self, key, value):
         self.instance2value[key] = value
@@ -148,3 +123,12 @@ class BaseDict:
     def get(self, index):
         item_by_index = list(self.instance2value.keys())[index]
         return self.instance2value[item_by_index]
+
+    @classmethod
+    def from_id_and_attribute(cls, id_and_attribute):
+        instance_list = [cls._base_class(yougile_id) for yougile_id in id_and_attribute.keys()]
+        [instance.reload() for instance in instance_list]
+        value_list = id_and_attribute.values()
+        return cls(instance_list, value_list)
+
+
