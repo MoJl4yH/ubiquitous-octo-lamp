@@ -46,34 +46,35 @@ class Base:
         for attribute in self._attributes.keys():
             self.__setattr__(attribute, None)
 
-    def fill_by_json(self, json):
-        for attribute, cls in self._attributes.items():
+    def fill_by_json(self, json, reload_related=True):
+        for attribute, class_creator in self._attributes.items():
             value = get_from_json(json, attribute, self.__class__.__name__)
-            self.__setattr__(attribute, value, cls)    
-
-    def __setattr__(self, key, value, cls=None):
-        if cls:
-            instance = None
-            if isinstance(cls, tuple):
-                initializer, converter = cls
-                instance = initializer(converter(value))
-            else:
-                instance = cls(value)
-            if 'reload' in dir(instance):
+            instance = self.related_instance_initializer(class_creator, value)
+            
+            if reload_related and 'reload' in dir(instance):
                 instance.reload()
-            self.__dict__[key] = instance
-        else:
-            super().__setattr__(key, value)
+            
+            self.__setattr__(attribute, instance)
 
-    def reload(self):
+    @staticmethod
+    def related_instance_initializer(class_creator, value):
+        instance = None
+        if isinstance(class_creator, tuple):
+            initializer, converter = class_creator
+            instance = initializer(converter(value))
+        else:
+            instance = class_creator(value)
+        return instance
+
+    def reload(self, reload_related=True):
         json = self._api.get_json([self._path, self.yougile_id])
-        self.fill_by_json(json)
+        self.fill_by_json(json, reload_related)
             
     @classmethod
-    def from_json(cls, json):
+    def from_json(cls, json, reload_related=True):
         yougile_id = get_from_json(json, 'yougile_id')
         base = cls(yougile_id)
-        base.fill_by_json(json)
+        base.fill_by_json(json, reload_related=True)
         return base
 
 
