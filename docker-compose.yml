@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  nginx:
+    container_name: nginx
+    image: nginx
+    ports:
+      - 80:80
+      # - 443:443
+    restart: always
+    volumes:
+      - ./services/nginx/config:/etc/nginx/conf.d/:ro
+    depends_on:
+      - web
+  web:
+    container_name: web
+    build: ./services/web
+    command: venv/bin/uvicorn --host 0.0.0.0 --port 5000 bot:app --log-config config/log.ini --reload
+    tty: true
+    stdin_open: true
+    expose:
+      - 5000
+    env_file:
+      - ./services/web/config/.env
+    volumes:
+      - ./services/web/logs:/logs:rw
+      - ./services/web/config:/app/config:rw
